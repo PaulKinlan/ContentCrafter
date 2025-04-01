@@ -1,4 +1,4 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { scrapeWebpage } from "./scraper";
@@ -7,6 +7,12 @@ import { urlAnalysisRequestSchema } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { generateImageWithReplicate, generatePlatformImagePrompt } from './replicate';
+import { Buffer } from 'buffer';
+
+// Declare global imageStreams property for TypeScript
+declare global {
+  var _imageStreams: Map<string, Uint8Array[]>;
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API endpoint to analyze a URL and generate social media content
@@ -109,6 +115,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint
   app.get("/api/health", (_req: Request, res: Response) => {
     res.status(200).json({ status: "ok" });
+  });
+
+  // Endpoint to serve generated images stored in memory
+  app.get("/api/image/:id", (req: Request, res: Response) => {
+    const { id } = req.params;
+    
+    if (!global._imageStreams) {
+      return res.status(404).send("Image storage not initialized");
+    }
+    
+    const imageData = global._imageStreams.get(id);
+    
+    if (!imageData || !imageData.length) {
+      return res.status(404).send("Image not found");
+    }
+    
+    try {
+      // Combine all chunks into one buffer
+      let totalLength = 0;
+      for (const chunk of imageData) {
+        totalLength += chunk.length;
+      }
+      
+      const buffer = Buffer.allocUnsafe(totalLength);
+      let offset = 0;
+      
+      for (const chunk of imageData) {
+        // Copy each chunk into the buffer
+        for (let i = 0; i < chunk.length; i++) {
+          buffer[offset + i] = chunk[i];
+        }
+        offset += chunk.length;
+      }
+      
+      // Detect the image format (assuming WebP)
+      // Set the content type to image/webp as Replicate generates WebP by default
+      res.setHeader('Content-Type', 'image/webp');
+      
+      // Send the image data
+      res.status(200).send(buffer);
+      
+      console.log(`Successfully served image ${id}`);
+    } catch (error) {
+      console.error(`Error serving image ${id}:`, error);
+      res.status(500).send("Error serving image");
+    }
   });
 
   const httpServer = createServer(app);

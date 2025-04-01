@@ -64,46 +64,40 @@ export async function generateImageWithReplicate(
     if (output instanceof ReadableStream) {
       console.log(`Processing ReadableStream for ${platform}...`);
       
-      // Create a reader for the stream
-      const reader = output.getReader();
-      let resultText = '';
+      // The model is returning the binary image data directly in the stream
+      // We need to create a custom endpoint to serve this image
       
-      // Read all chunks from the stream
+      // Generate a unique image ID for this generation
+      const imageId = `${platform}-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+      console.log(`Generated image ID for ${platform}: ${imageId}`);
+      
+      // Store this stream reference for serving later
+      // We'll add a route in server/routes.ts to serve this image
+      if (!global._imageStreams) {
+        global._imageStreams = new Map<string, Uint8Array[]>();
+      }
+      
+      // We can't directly store the stream, so let's collect all chunks first
       try {
+        const reader = output.getReader();
+        const chunks: Uint8Array[] = [];
+        
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          
-          // Convert the chunk to a string (assuming UTF-8 encoding)
           if (value) {
-            const chunk = new TextDecoder().decode(value);
-            resultText += chunk;
-            console.log(`Read chunk: ${chunk.substring(0, 50)}...`);
+            chunks.push(value);
           }
         }
         
-        console.log(`Complete stream result for ${platform}:`, resultText.substring(0, 200));
+        // Store the chunks for serving
+        global._imageStreams.set(imageId, chunks);
+        console.log(`Stored image data for ${imageId}, ${chunks.length} chunks`);
         
-        // Try to parse the final line as JSON (the completed result)
-        try {
-          // Sometimes the stream returns multiple JSON objects, get the last complete one
-          const lines = resultText.trim().split('\n');
-          const lastLine = lines[lines.length - 1].trim();
-          
-          if (lastLine) {
-            const jsonResult = JSON.parse(lastLine);
-            
-            if (Array.isArray(jsonResult) && jsonResult.length > 0) {
-              console.log(`Successfully parsed stream for ${platform}: ${jsonResult[0]}`);
-              return jsonResult[0];
-            } else if (typeof jsonResult === 'string') {
-              console.log(`Successfully parsed stream for ${platform}: ${jsonResult}`);
-              return jsonResult;
-            }
-          }
-        } catch (parseError) {
-          console.error(`Error parsing JSON from stream for ${platform}:`, parseError);
-        }
+        // Return a URL to our custom endpoint
+        const imageUrl = `/api/image/${imageId}`;
+        console.log(`Generated local image URL for ${platform}: ${imageUrl}`);
+        return imageUrl;
       } catch (streamError) {
         console.error(`Error reading stream for ${platform}:`, streamError);
       }
