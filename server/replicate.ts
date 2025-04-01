@@ -45,7 +45,7 @@ export async function generateImageWithReplicate(
     }
 
     // Run the model - this returns a ReadableStream
-    const output = await replicate.run("black-forest-labs/flux-1.1-pro", {
+    const output = await replicate.run("black-forest-labs/flux-schnell", {
       input: {
         prompt: prompt,
         width: dimensions.width,
@@ -58,30 +58,36 @@ export async function generateImageWithReplicate(
       },
     });
 
-    console.log("Replicate API response type:", typeof output, output instanceof ReadableStream ? "ReadableStream" : "Not ReadableStream");
+    console.log(
+      "Replicate API response type:",
+      typeof output,
+      output instanceof ReadableStream
+        ? "ReadableStream"
+        : "Not ReadableStream",
+    );
 
     // Check if we received a ReadableStream
     if (output instanceof ReadableStream) {
       console.log(`Processing ReadableStream for ${platform}...`);
-      
+
       // The model is returning the binary image data directly in the stream
       // We need to create a custom endpoint to serve this image
-      
+
       // Generate a unique image ID for this generation
       const imageId = `${platform}-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
       console.log(`Generated image ID for ${platform}: ${imageId}`);
-      
+
       // Store this stream reference for serving later
       // We'll add a route in server/routes.ts to serve this image
       if (!global._imageStreams) {
         global._imageStreams = new Map<string, Uint8Array[]>();
       }
-      
+
       // We can't directly store the stream, so let's collect all chunks first
       try {
         const reader = output.getReader();
         const chunks: Uint8Array[] = [];
-        
+
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -89,11 +95,13 @@ export async function generateImageWithReplicate(
             chunks.push(value);
           }
         }
-        
+
         // Store the chunks for serving
         global._imageStreams.set(imageId, chunks);
-        console.log(`Stored image data for ${imageId}, ${chunks.length} chunks`);
-        
+        console.log(
+          `Stored image data for ${imageId}, ${chunks.length} chunks`,
+        );
+
         // Return a URL to our custom endpoint
         const imageUrl = `/api/image/${imageId}`;
         console.log(`Generated local image URL for ${platform}: ${imageUrl}`);
@@ -104,10 +112,14 @@ export async function generateImageWithReplicate(
     }
     // If it's not a stream but directly an array/string (fallback for backward compatibility)
     else if (Array.isArray(output) && output.length > 0) {
-      console.log(`Successfully received array output for ${platform}: ${output[0]}`);
+      console.log(
+        `Successfully received array output for ${platform}: ${output[0]}`,
+      );
       return output[0] as string;
-    } else if (typeof output === 'string') {
-      console.log(`Successfully received string output for ${platform}: ${output}`);
+    } else if (typeof output === "string") {
+      console.log(
+        `Successfully received string output for ${platform}: ${output}`,
+      );
       return output;
     }
 
