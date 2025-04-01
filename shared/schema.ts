@@ -6,7 +6,7 @@ import { z } from "zod";
 export const platformSchema = z.enum(["x", "linkedin", "bluesky", "mastodon"]);
 export type Platform = z.infer<typeof platformSchema>;
 
-export const goalSchema = z.enum(["engagement", "awareness", "traffic", "conversion", "authority"]);
+export const goalSchema = z.enum(["none", "engagement", "awareness", "traffic", "conversion", "authority"]);
 export type Goal = z.infer<typeof goalSchema>;
 
 // Schema for extracted webpage content
@@ -37,7 +37,7 @@ export const socialPost = pgTable("social_posts", {
   content: text("content").notNull(),
   characterCount: integer("character_count").notNull(),
   suggestedImage: text("suggested_image"),
-  goal: text("goal", { enum: ["engagement", "awareness", "traffic", "conversion", "authority"] }),
+  goal: text("goal", { enum: ["none", "engagement", "awareness", "traffic", "conversion", "authority"] }),
 });
 
 export const insertSocialPostSchema = createInsertSchema(socialPost).pick({

@@ -55,7 +55,7 @@ export async function generateSocialPosts(
   webpageData: WebpageData,
   goal?: string
 ): Promise<Record<Platform, GeneratedPost>> {
-  const goalContext = goal
+  const goalContext = goal && goal !== "none"
     ? `The content should focus on the goal of "${goal}" - prioritize content that helps achieve this goal.`
     : "The content should be balanced for general engagement and information sharing.";
 
