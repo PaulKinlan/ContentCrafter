@@ -52,7 +52,7 @@ export const insertSocialPostSchema = createInsertSchema(socialPost).pick({
 // Create request schema for URL analysis
 export const urlAnalysisRequestSchema = z.object({
   url: z.string().url(),
-  goal: goalSchema.optional(),
+  goal: z.string().transform(val => val === "" ? "none" : val).pipe(goalSchema),
 });
 
 // Type definitions

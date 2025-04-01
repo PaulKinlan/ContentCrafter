@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { scrapeWebpage } from "./scraper";
-import { generateSocialPosts } from "./openai";
+import { generateSocialPosts, generateImage } from "./openai";
 import { urlAnalysisRequestSchema } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
@@ -31,15 +31,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate social media posts
       const generatedPosts = await generateSocialPosts(webpageData, goal);
 
-      // Store each platform post
+      // Process each platform
       for (const platform of ["x", "linkedin", "bluesky", "mastodon"] as const) {
         const post = generatedPosts[platform];
+        let imageUrl = post.suggestedImage;
+        
+        // If we don't have an image from the webpage or if auto-generation is needed
+        if (!imageUrl || webpageData.images.length === 0) {
+          try {
+            // Generate a platform-specific image prompt
+            const imagePrompt = `Create a social media image for ${platform} about: ${webpageData.title}. 
+              The content is about: ${webpageData.description || webpageData.title}.
+              Make it visually appealing and professional for ${platform} platform.
+              Style: ${platform === 'linkedin' ? 'professional and corporate' : 
+                      platform === 'x' ? 'modern and engaging' : 
+                      platform === 'bluesky' ? 'friendly and minimalist' : 
+                      'community-focused and authentic'}`;
+            
+            // Generate image
+            const generatedImageUrl = await generateImage(imagePrompt);
+            if (generatedImageUrl) {
+              imageUrl = generatedImageUrl;
+            }
+          } catch (error) {
+            console.error(`Error generating image for ${platform}:`, error);
+          }
+        }
+
+        // Store the post with the image
         await storage.storeSocialPost({
           webpageContentId: storedWebpageContent.id,
           platform,
           content: post.content,
           characterCount: post.characterCount,
-          suggestedImage: post.suggestedImage,
+          suggestedImage: imageUrl,
           goal: goal
         });
       }

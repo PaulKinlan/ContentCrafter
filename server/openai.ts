@@ -3,6 +3,24 @@ import OpenAI from "openai";
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "demo_key" });
 
+// Function to generate image using DALL-E
+export async function generateImage(prompt: string): Promise<string | undefined> {
+  try {
+    const response = await openai.images.generate({
+      model: "dall-e-3",
+      prompt: prompt,
+      n: 1,
+      size: "1024x1024",
+      quality: "standard",
+    });
+
+    return response.data[0].url;
+  } catch (error) {
+    console.error("Error generating image:", error);
+    return undefined;
+  }
+}
+
 type Platform = "x" | "linkedin" | "bluesky" | "mastodon";
 
 interface PlatformConfig {
@@ -79,7 +97,18 @@ export async function generateSocialPosts(
             4. Includes appropriate formatting (line breaks, emojis, hashtags)
             5. Always includes the URL to the original content
             
-            Return the results as a JSON object.`,
+            Important: Always create actual content for each platform. Never return empty or generic placeholder content.
+            Make sure to analyze the webpage content thoroughly and extract meaningful information.
+            
+            Return the results as a JSON object with these keys:
+            - x: the post content for X (formerly Twitter)
+            - linkedin: the post content for LinkedIn
+            - bluesky: the post content for BlueSky
+            - mastodon: the post content for Mastodon
+            - x_image: (optional) image suggestion for X
+            - linkedin_image: (optional) image suggestion for LinkedIn
+            - bluesky_image: (optional) image suggestion for BlueSky
+            - mastodon_image: (optional) image suggestion for Mastodon`,
         },
         {
           role: "user",
@@ -91,17 +120,43 @@ export async function generateSocialPosts(
             Content: ${webpageData.content.substring(0, 2000)}
             Tags: ${webpageData.tags.join(", ")}
             
-            For each platform (X, LinkedIn, BlueSky, Mastodon), create content that:
-            - Follows the platform's style guidelines
-            - Respects character limits
-            - X: ${PLATFORM_CONFIGS.x.maxChars} chars - ${PLATFORM_CONFIGS.x.style}
-            - LinkedIn: ${PLATFORM_CONFIGS.linkedin.maxChars} chars - ${PLATFORM_CONFIGS.linkedin.style}
-            - BlueSky: ${PLATFORM_CONFIGS.bluesky.maxChars} chars - ${PLATFORM_CONFIGS.bluesky.style}
-            - Mastodon: ${PLATFORM_CONFIGS.mastodon.maxChars} chars - ${PLATFORM_CONFIGS.mastodon.style}
-            - Includes the URL: ${webpageData.url}
+            For each platform, create ENGAGING and INFORMATIVE content:
             
-            If there are images available, suggest which one might work best for each platform.
-            Available images: ${webpageData.images.join(", ")}`,
+            1. X (Twitter):
+               - Character limit: ${PLATFORM_CONFIGS.x.maxChars}
+               - Style: ${PLATFORM_CONFIGS.x.style}
+               - Be concise but impactful
+               - Use relevant hashtags (2-3 max)
+               - Include emojis where appropriate
+               - MUST include the URL: ${webpageData.url}
+            
+            2. LinkedIn:
+               - Character limit: ${PLATFORM_CONFIGS.linkedin.maxChars}
+               - Style: ${PLATFORM_CONFIGS.linkedin.style}
+               - More detailed and professional
+               - Include bullet points for key takeaways
+               - Use 1-2 professional hashtags
+               - MUST include the URL: ${webpageData.url}
+            
+            3. BlueSky:
+               - Character limit: ${PLATFORM_CONFIGS.bluesky.maxChars}
+               - Style: ${PLATFORM_CONFIGS.bluesky.style}
+               - Conversational and personal tone
+               - Can include creative elements
+               - MUST include the URL: ${webpageData.url}
+            
+            4. Mastodon:
+               - Character limit: ${PLATFORM_CONFIGS.mastodon.maxChars}
+               - Style: ${PLATFORM_CONFIGS.mastodon.style}
+               - Community-focused
+               - Use meaningful hashtags
+               - Transparent and authentic
+               - MUST include the URL: ${webpageData.url}
+            
+            If there are images available, suggest which one might work best for each platform:
+            Available images: ${webpageData.images.join(", ")}
+            
+            Remember to analyze the content thoroughly and extract the most important points for each platform.`,
         },
       ],
       response_format: { type: "json_object" },

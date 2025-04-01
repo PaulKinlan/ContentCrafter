@@ -28,7 +28,7 @@ export default function UrlForm({ onSubmit, isLoading }: UrlFormProps) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       url: "",
-      goal: "",
+      goal: "none",
     },
   });
 
