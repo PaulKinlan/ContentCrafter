@@ -44,9 +44,8 @@ export async function generateImageWithReplicate(
       return undefined;
     }
 
-    // Create a prediction
-    const prediction = await replicate.predictions.create({
-      version: "471dee8e6c1bda0de704e854a9bee7a6b6bc172cc496ccad0d54be1b2bb114ac", // flux-1.1-pro model version
+    // Run the model - this returns a ReadableStream
+    const output = await replicate.run("black-forest-labs/flux-1.1-pro", {
       input: {
         prompt: prompt,
         width: dimensions.width,
@@ -56,36 +55,69 @@ export async function generateImageWithReplicate(
         safety_tolerance: 2,
         prompt_upsampling: true,
         aspect_ratio: "custom",
-      }
+      },
     });
 
-    // Poll for prediction status
-    let result = prediction;
-    while (
-      result.status !== "succeeded" &&
-      result.status !== "failed" &&
-      result.status !== "canceled"
-    ) {
-      console.log(`Waiting for image generation (status: ${result.status})...`);
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
-      
-      // Get the prediction status
-      result = await replicate.predictions.get(prediction.id);
-    }
+    console.log("Replicate API response type:", typeof output, output instanceof ReadableStream ? "ReadableStream" : "Not ReadableStream");
 
-    // Check if the prediction succeeded
-    if (result.status === "succeeded" && result.output) {
-      // The output can either be an array of URLs or a single URL
-      if (Array.isArray(result.output) && result.output.length > 0) {
-        console.log(`Successfully generated image for ${platform}: ${result.output[0]}`);
-        return result.output[0];
-      } else if (typeof result.output === 'string') {
-        console.log(`Successfully generated image for ${platform}: ${result.output}`);
-        return result.output;
+    // Check if we received a ReadableStream
+    if (output instanceof ReadableStream) {
+      console.log(`Processing ReadableStream for ${platform}...`);
+      
+      // Create a reader for the stream
+      const reader = output.getReader();
+      let resultText = '';
+      
+      // Read all chunks from the stream
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          // Convert the chunk to a string (assuming UTF-8 encoding)
+          if (value) {
+            const chunk = new TextDecoder().decode(value);
+            resultText += chunk;
+            console.log(`Read chunk: ${chunk.substring(0, 50)}...`);
+          }
+        }
+        
+        console.log(`Complete stream result for ${platform}:`, resultText.substring(0, 200));
+        
+        // Try to parse the final line as JSON (the completed result)
+        try {
+          // Sometimes the stream returns multiple JSON objects, get the last complete one
+          const lines = resultText.trim().split('\n');
+          const lastLine = lines[lines.length - 1].trim();
+          
+          if (lastLine) {
+            const jsonResult = JSON.parse(lastLine);
+            
+            if (Array.isArray(jsonResult) && jsonResult.length > 0) {
+              console.log(`Successfully parsed stream for ${platform}: ${jsonResult[0]}`);
+              return jsonResult[0];
+            } else if (typeof jsonResult === 'string') {
+              console.log(`Successfully parsed stream for ${platform}: ${jsonResult}`);
+              return jsonResult;
+            }
+          }
+        } catch (parseError) {
+          console.error(`Error parsing JSON from stream for ${platform}:`, parseError);
+        }
+      } catch (streamError) {
+        console.error(`Error reading stream for ${platform}:`, streamError);
       }
     }
+    // If it's not a stream but directly an array/string (fallback for backward compatibility)
+    else if (Array.isArray(output) && output.length > 0) {
+      console.log(`Successfully received array output for ${platform}: ${output[0]}`);
+      return output[0] as string;
+    } else if (typeof output === 'string') {
+      console.log(`Successfully received string output for ${platform}: ${output}`);
+      return output;
+    }
 
-    console.log(`Image generation for ${platform} did not succeed. Status: ${result.status}`);
+    console.log(`Could not extract image URL for ${platform}`);
     return undefined;
   } catch (error) {
     console.error("Error generating image with Replicate:", error);
