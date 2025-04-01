@@ -2,10 +2,11 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { scrapeWebpage } from "./scraper";
-import { generateSocialPosts, generateImage } from "./openai";
+import { generateSocialPosts } from "./openai";
 import { urlAnalysisRequestSchema } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
+import { generateImageWithReplicate, generatePlatformImagePrompt } from './replicate';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // API endpoint to analyze a URL and generate social media content
@@ -34,27 +35,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Process each platform
       for (const platform of ["x", "linkedin", "bluesky", "mastodon"] as const) {
         const post = generatedPosts[platform];
-        let imageUrl = post.suggestedImage;
+        let imageUrl: string | undefined;
         
-        // If we don't have an image from the webpage or if auto-generation is needed
-        if (!imageUrl || webpageData.images.length === 0) {
+        // First, try to use meta image if available (highest priority)
+        if (webpageData.images.length > 0) {
+          imageUrl = webpageData.images[0]; // Use first meta image
+          console.log(`Using meta image for ${platform}: ${imageUrl}`);
+        }
+        
+        // If no meta image or if we specifically want to generate custom images for each platform
+        if (!imageUrl || platform !== "x") { // Always generate platform-specific images except for X
           try {
-            // Generate a platform-specific image prompt
-            const imagePrompt = `Create a social media image for ${platform} about: ${webpageData.title}. 
-              The content is about: ${webpageData.description || webpageData.title}.
-              Make it visually appealing and professional for ${platform} platform.
-              Style: ${platform === 'linkedin' ? 'professional and corporate' : 
-                      platform === 'x' ? 'modern and engaging' : 
-                      platform === 'bluesky' ? 'friendly and minimalist' : 
-                      'community-focused and authentic'}`;
+            // Generate an optimized prompt for this platform
+            const imagePrompt = generatePlatformImagePrompt(
+              webpageData.title, 
+              webpageData.description || webpageData.title, 
+              platform
+            );
             
-            // Generate image
-            const generatedImageUrl = await generateImage(imagePrompt);
+            console.log(`Generating custom image for ${platform}...`);
+            
+            // Generate image using Replicate API with the platform-specific dimensions
+            const generatedImageUrl = await generateImageWithReplicate(imagePrompt, platform);
             if (generatedImageUrl) {
               imageUrl = generatedImageUrl;
+              console.log(`Successfully generated custom image for ${platform}: ${imageUrl}`);
             }
           } catch (error) {
             console.error(`Error generating image for ${platform}:`, error);
+            // If image generation fails and we have no meta image, we'll have no image for this platform
           }
         }
 

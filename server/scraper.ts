@@ -42,51 +42,58 @@ function extractTags($: cheerio.CheerioAPI): string[] {
         headingText.push(...words);
       }
     });
-    return [...new Set(headingText)].slice(0, 5);
+    return Array.from(new Set(headingText)).slice(0, 5);
   }
 
-  return [...new Set(articleTags)].slice(0, 10);
+  return Array.from(new Set(articleTags)).slice(0, 10);
 }
 
-// Function to extract images from content
+// Function to extract images from content - ONLY use meta tags
 function extractImages($: cheerio.CheerioAPI, baseUrl: string): string[] {
   const images: string[] = [];
   
-  $('img').each((_, el) => {
-    let src = $(el).attr('src') || $(el).attr('data-src') || '';
-    
-    // Skip tiny icons, 1x1 pixels, or tracking pixels
-    if (src.includes('1x1') || src.includes('pixel') || src.includes('icon')) {
-      return;
-    }
+  // ONLY extract og:image or twitter:image from meta tags
+  const ogImage = $('meta[property="og:image"]').attr('content');
+  const twitterImage = $('meta[name="twitter:image"]').attr('content');
+  
+  // Make URL absolute and add to images array
+  const makeAbsoluteAndAdd = (src: string) => {
+    if (!src) return;
     
     // Skip base64 encoded images
-    if (src.startsWith('data:')) {
-      return;
-    }
+    if (src.startsWith('data:')) return;
+    
+    let absoluteSrc = src;
     
     // Make relative URLs absolute
-    if (src && !src.startsWith('http')) {
+    if (!src.startsWith('http')) {
       try {
         const urlObj = new URL(baseUrl);
         if (src.startsWith('/')) {
-          src = `${urlObj.protocol}//${urlObj.host}${src}`;
+          absoluteSrc = `${urlObj.protocol}//${urlObj.host}${src}`;
         } else {
-          src = `${urlObj.protocol}//${urlObj.host}/${src}`;
+          absoluteSrc = `${urlObj.protocol}//${urlObj.host}/${src}`;
         }
       } catch (error) {
-        // If URL construction fails, skip this image
-        return;
+        return; // If URL construction fails, skip this image
       }
     }
     
-    if (src) {
-      images.push(src);
+    // Add to images array if not already included
+    if (absoluteSrc && !images.includes(absoluteSrc)) {
+      images.push(absoluteSrc);
     }
-  });
+  };
   
-  // Deduplicate images
-  return [...new Set(images)].slice(0, 6);
+  // Add meta images only
+  if (ogImage) makeAbsoluteAndAdd(ogImage);
+  if (twitterImage) makeAbsoluteAndAdd(twitterImage);
+  
+  // We're intentionally NOT extracting any other images from the page
+  // as per the user's request to only use meta tag images
+  
+  console.log('Meta images extracted:', images);
+  return images;
 }
 
 // Extract content from an article
@@ -169,8 +176,8 @@ export async function scrapeWebpage(url: string): Promise<WebpageData> {
       tags,
       images
     };
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error scraping webpage:', error);
-    throw new Error(`Failed to scrape webpage: ${error.message}`);
+    throw new Error(`Failed to scrape webpage: ${error.message || 'Unknown error'}`);
   }
 }
