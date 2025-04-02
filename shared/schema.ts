@@ -16,6 +16,7 @@ export const webpageContent = pgTable("webpage_contents", {
   title: text("title").notNull(),
   description: text("description"),
   domain: text("domain"),
+  content: text("content"),  // Full content that gets passed to the LLM
   tags: text("tags").array(),
   images: text("images").array(),
 });
@@ -25,6 +26,7 @@ export const insertWebpageContentSchema = createInsertSchema(webpageContent).pic
   title: true,
   description: true,
   domain: true,
+  content: true,
   tags: true,
   images: true,
 });

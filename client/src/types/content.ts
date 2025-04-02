@@ -4,6 +4,7 @@ export interface SourceContent {
   title: string;
   description?: string;
   domain?: string;
+  content?: string;  // Full content that gets passed to the LLM
   tags: string[];
   images: string[];
 }

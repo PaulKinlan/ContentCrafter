@@ -31,6 +31,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         title: webpageData.title,
         description: webpageData.description,
         domain: webpageData.domain,
+        content: webpageData.content, // Store the content for expanded view
         tags: webpageData.tags,
         images: webpageData.images
       });
