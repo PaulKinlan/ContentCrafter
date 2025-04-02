@@ -59,14 +59,36 @@ export default function PlatformCard({ post, config }: PlatformCardProps) {
     setIsEditing(false);
   };
   
+  // Format goal for display
+  const formatGoal = (goal?: string) => {
+    if (!goal || goal === 'none') return null;
+    
+    // Format the goal string (capitalize first letter, replace dashes with spaces)
+    const formattedGoal = goal.charAt(0).toUpperCase() + goal.slice(1).replace(/-/g, ' ');
+    
+    // Return badge with appropriate styling
+    return (
+      <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+        Goal: {formattedGoal}
+      </span>
+    );
+  };
+
   return (
     <>
       <Card className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 h-full flex flex-col">
         <CardHeader className={`px-6 py-3 flex flex-row items-center justify-between ${config.background}`}>
-          <h3 className="text-white font-semibold flex items-center">
-            {config.icon}
-            <span className="ml-2">{config.name}</span>
-          </h3>
+          <div className="flex flex-col">
+            <h3 className="text-white font-semibold flex items-center">
+              {config.icon}
+              <span className="ml-2">{config.name}</span>
+            </h3>
+            {post.goal && post.goal !== 'none' && (
+              <div className="mt-1">
+                {formatGoal(post.goal)}
+              </div>
+            )}
+          </div>
           <span className="text-white text-sm">{config.maxChars} chars</span>
         </CardHeader>
         

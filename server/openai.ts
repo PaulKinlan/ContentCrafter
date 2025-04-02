@@ -73,9 +73,57 @@ export async function generateSocialPosts(
   webpageData: WebpageData,
   goal?: string
 ): Promise<Record<Platform, GeneratedPost>> {
-  const goalContext = goal && goal !== "none"
-    ? `The content should focus on the goal of "${goal}" - prioritize content that helps achieve this goal.`
-    : "The content should be balanced for general engagement and information sharing.";
+  // Define specific goal-based strategies
+  let goalContext = "The content should be balanced for general engagement and information sharing.";
+  
+  if (goal && goal !== "none") {
+    switch(goal) {
+      case "engagement":
+        goalContext = `The content should focus on MAXIMIZING ENGAGEMENT. 
+        - Use attention-grabbing opening lines
+        - Include questions that prompt responses
+        - Add clear calls-to-action encouraging replies/likes/shares
+        - Use emotionally resonant language
+        - Create content that sparks conversation`;
+        break;
+      case "awareness":
+        goalContext = `The content should focus on INCREASING BRAND AWARENESS.
+        - Highlight key brand values and differentiators
+        - Make the brand name/offering clearly visible 
+        - Focus on memorable, shareable content
+        - Use consistent brand voice
+        - Make statements that are straightforward and easy to remember`;
+        break;
+      case "traffic":
+        goalContext = `The content should focus on DRIVING TRAFFIC to the website.
+        - Include compelling reasons to click through to the URL
+        - Emphasize what valuable content awaits on the website
+        - Create curiosity gaps that can only be resolved by visiting
+        - Use strong call-to-action phrases like "Learn more at:", "Read the full story:", etc.
+        - Highlight exclusive content available at the link`;
+        break;
+      case "conversion":
+        goalContext = `The content should focus on BOOSTING CONVERSIONS.
+        - Emphasize benefits and value proposition
+        - Address objections preemptively
+        - Create urgency when appropriate
+        - Include clear next steps for the reader
+        - Target content to users ready to take action
+        - Focus on solution-oriented messaging`;
+        break;
+      case "authority":
+        goalContext = `The content should focus on BUILDING AUTHORITY.
+        - Highlight expertise and unique insights
+        - Include data points and research when available
+        - Present information in a definitive, authoritative tone
+        - Position the content source as a thought leader
+        - Use industry-specific terminology appropriately
+        - Support claims with evidence from the article`;
+        break;
+      default:
+        goalContext = `The content should focus on the goal of "${goal}" - prioritize content that helps achieve this goal.`;
+    }
+  }
 
   try {
     const response = await openai.chat.completions.create({

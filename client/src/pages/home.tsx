@@ -37,7 +37,10 @@ export default function Home() {
         
         {isSuccess && data && (
           <div className="space-y-8 mt-8">
-            <SourceContentPreview content={data.sourceContent} />
+            <SourceContentPreview 
+              content={data.sourceContent} 
+              goal={data.posts.x.goal} 
+            />
             
             <PlatformPosts data={data} />
           </div>

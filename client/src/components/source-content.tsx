@@ -2,14 +2,16 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ChevronDown, ChevronUp, Target } from "lucide-react";
 import { SourceContent } from "@/types/content";
 
 interface SourceContentProps {
   content: SourceContent;
+  goal?: string;
 }
 
-export default function SourceContentPreview({ content }: SourceContentProps) {
+export default function SourceContentPreview({ content, goal }: SourceContentProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Function to format the full content for better readability
@@ -21,10 +23,29 @@ export default function SourceContentPreview({ content }: SourceContentProps) {
     ));
   };
 
+  // Format goal for display
+  const formatGoal = (goal?: string) => {
+    if (!goal || goal === 'none') return null;
+    
+    // Format the goal string (capitalize first letter, replace dashes with spaces)
+    const formattedGoal = goal.charAt(0).toUpperCase() + goal.slice(1).replace(/-/g, ' ');
+    
+    // Return badge with appropriate styling
+    return (
+      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 flex items-center gap-1">
+        <Target size={12} />
+        {formattedGoal}
+      </Badge>
+    );
+  };
+
   return (
     <Card className="bg-white rounded-xl shadow-md mb-8">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-xl font-semibold">Source Content</CardTitle>
+        <div className="flex items-center space-x-2">
+          <CardTitle className="text-xl font-semibold">Source Content</CardTitle>
+          {goal && goal !== 'none' && formatGoal(goal)}
+        </div>
         <Button 
           variant="ghost" 
           size="sm"

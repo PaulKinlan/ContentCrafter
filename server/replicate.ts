@@ -142,13 +142,15 @@ export function generatePlatformImagePrompt(
   title: string,
   description: string,
   platform: string,
+  goal?: string
 ): string {
-  const basePrompt = `Create a professional social media image for ${platform} about: ${title}`;
+  let basePrompt = `Create a professional social media image for ${platform} about: ${title}`;
   const contentContext = description
     ? `. The content is about: ${description.substring(0, 100)}`
     : "";
 
-  const styleGuide: Record<string, string> = {
+  // Base style guides for platforms
+  const baseStyleGuide: Record<string, string> = {
     x: "modern and engaging style, vibrant colors, minimal text, professional photography quality",
     linkedin:
       "corporate and professional style, business-appropriate, clean layout, trustworthy appearance",
@@ -157,11 +159,30 @@ export function generatePlatformImagePrompt(
     mastodon:
       "community-focused and authentic style, warm colors, inclusive imagery",
   };
+  
+  // Goal-specific visual approaches
+  const goalVisualGuide: Record<string, string> = {
+    engagement: "eye-catching and emotionally resonant, with vibrant colors that stand out in a feed, designed to stop scrolling",
+    awareness: "brand-focused with clear visual elements that reinforce brand identity, memorable and distinctive visuals",
+    traffic: "visually indicates there's more to discover, creates curiosity with partial information or teaser elements",
+    conversion: "clear value proposition visual, shows benefits or results, includes subtle urgency cues",
+    authority: "data-driven visuals, professional and authoritative imagery, expert-level presentation with charts or visual structure"
+  };
+  
+  // Add goal-specific prompt elements if a goal is provided and valid
+  let goalPrompt = "";
+  if (goal && goal !== "none" && goalVisualGuide[goal]) {
+    goalPrompt = `. Optimize for ${goal} goal with ${goalVisualGuide[goal]}`;
+    // Adjust the base prompt to include the goal
+    basePrompt = `Create a ${goal}-focused social media image for ${platform} about: ${title}`;
+  }
+  
+  const styleGuide = baseStyleGuide;
 
   // Validate platform and use its style or default to x style
   const validPlatforms = ["x", "linkedin", "bluesky", "mastodon"];
   const validPlatform = validPlatforms.includes(platform) ? platform : "x";
   const style = styleGuide[validPlatform];
 
-  return `${basePrompt}${contentContext}. ${style}. High resolution, no text overlay.`;
+  return `${basePrompt}${contentContext}. ${style}${goalPrompt}. High resolution, no text overlay.`;
 }

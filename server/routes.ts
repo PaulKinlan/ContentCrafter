@@ -57,7 +57,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const imagePrompt = generatePlatformImagePrompt(
               webpageData.title, 
               webpageData.description || webpageData.title, 
-              platform
+              platform,
+              goal
             );
             
             console.log(`Generating custom image for ${platform}...`);
