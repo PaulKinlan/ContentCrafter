@@ -4,7 +4,6 @@ import Footer from "@/components/layout/footer";
 import UrlForm from "@/components/url-form";
 import LoadingState from "@/components/loading-state";
 import SourceContentPreview from "@/components/source-content";
-import ImageSuggestions from "@/components/image-suggestions";
 import PlatformPosts from "@/components/platform-posts";
 import { useUrlAnalysis } from "@/hooks/use-url-analysis";
 import { UrlFormData } from "@/types/content";
@@ -39,8 +38,6 @@ export default function Home() {
         {isSuccess && data && (
           <div className="space-y-8 mt-8">
             <SourceContentPreview content={data.sourceContent} />
-            
-            <ImageSuggestions images={data.sourceContent.images} />
             
             <PlatformPosts data={data} />
           </div>
