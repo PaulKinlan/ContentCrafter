@@ -45,7 +45,7 @@ export async function generateImageWithReplicate(
     }
 
     // Run the model - this returns a ReadableStream
-    const output = await replicate.run("black-forest-labs/flux-schnell", {
+    const output = await replicate.run("black-forest-labs/flux-1.1-pro", {
       input: {
         prompt: prompt,
         width: dimensions.width,
